@@ -161,7 +161,9 @@ func TestEmptyPromptSkipped(t *testing.T) {
 	log := fakeCLI(t)
 	a := newTestAgent("")
 	a.trigger("")
-	a.run(context.Background(), 1, "test")
+	if got := a.run(context.Background(), 1, "test"); got != 1 {
+		t.Errorf("skipped run: status %d, want 1", got)
+	}
 	a.trigger("only")
 	a.run(context.Background(), 2, "test")
 	if r := runs(t, log, 1); len(r) != 1 || r[0] != "args: -p\nstdin: only\n" {
@@ -181,7 +183,9 @@ func TestPromptErrorKeepsMessages(t *testing.T) {
 		return "p", nil
 	}
 	a.trigger("m")
-	a.run(context.Background(), 1, "test")
+	if got := a.run(context.Background(), 1, "test"); got != 1 {
+		t.Errorf("skipped run: status %d, want 1", got)
+	}
 	a.run(context.Background(), 2, "test")
 	if r := runs(t, log, 1); len(r) != 1 || r[0] != "args: -p\nstdin: p\n\nm\n" {
 		t.Errorf("runs %q", r)
