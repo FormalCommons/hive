@@ -4,7 +4,7 @@
 # README.md.
 services:
   gateway:
-    image: ghcr.io/mathlib-initiative/hive-gateway
+    image: ghcr.io/formalcommons/hive-gateway
     volumes:
       - ./gateway.json:/etc/hive-gateway/config.json:ro,z
     environment:
@@ -12,7 +12,7 @@ services:
       GATEWAY_TOKEN: ${GATEWAY_TOKEN:?}
 
   agent:
-    image: ghcr.io/mathlib-initiative/hive-agent
+    image: ghcr.io/formalcommons/hive-agent
     command: >-
       -cli claude -session resume -every 30m -listen :8080
       -prompt-file /prompt/PROMPT.md -- --dangerously-skip-permissions

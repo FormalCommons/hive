@@ -132,7 +132,7 @@ Run the published image with your config and secrets:
 docker run --rm -p 8080:8080 \
   -v "$PWD/gateway/example.json:/etc/hive-gateway/config.json:ro" \
   -e GATEWAY_TOKEN -e CF_ACCOUNT_ID -e CF_GATEWAY_ID -e CF_AIG_TOKEN \
-  ghcr.io/mathlib-initiative/hive-gateway
+  ghcr.io/formalcommons/hive-gateway
 ```
 
 Podman takes the same arguments. To build the image yourself, run
