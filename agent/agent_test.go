@@ -161,7 +161,9 @@ func TestEmptyPromptSkipped(t *testing.T) {
 	log := fakeCLI(t)
 	a := newTestAgent("")
 	a.trigger("")
-	a.run(context.Background(), 1, "test")
+	if got := a.run(context.Background(), 1, "test"); got != 1 {
+		t.Errorf("skipped run: status %d, want 1", got)
+	}
 	a.trigger("only")
 	a.run(context.Background(), 2, "test")
 	if r := runs(t, log, 1); len(r) != 1 || r[0] != "args: -p\nstdin: only\n" {
@@ -181,7 +183,9 @@ func TestPromptErrorKeepsMessages(t *testing.T) {
 		return "p", nil
 	}
 	a.trigger("m")
-	a.run(context.Background(), 1, "test")
+	if got := a.run(context.Background(), 1, "test"); got != 1 {
+		t.Errorf("skipped run: status %d, want 1", got)
+	}
 	a.run(context.Background(), 2, "test")
 	if r := runs(t, log, 1); len(r) != 1 || r[0] != "args: -p\nstdin: p\n\nm\n" {
 		t.Errorf("runs %q", r)
@@ -210,6 +214,51 @@ func TestTimeout(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "run 1 timed out") {
 		t.Errorf("log %q", out)
+	}
+}
+
+// TestStatus checks the exit status of a run: the CLI's, as the shell
+// reports it, or statusTimedOut.
+func TestStatus(t *testing.T) {
+	fakeCLI(t)
+	for _, tc := range []struct {
+		then    string
+		timeout time.Duration
+		want    int
+	}{
+		{"", 0, 0},
+		{"exit 3", 0, 3},
+		{"kill -9 $$", 0, 128 + 9},
+		{"sleep 30", time.Second, statusTimedOut},
+	} {
+		t.Setenv("FAKE_THEN", tc.then)
+		a := newTestAgent("p")
+		a.timeout = tc.timeout
+		if got := a.run(context.Background(), 1, "test"); got != tc.want {
+			t.Errorf("%q: status %d, want %d", tc.then, got, tc.want)
+		}
+	}
+}
+
+// TestStoppedStatus checks that a run stopped by shutting down reports
+// statusStopped, also when it has a timeout of its own.
+func TestStoppedStatus(t *testing.T) {
+	log := fakeCLI(t)
+	t.Setenv("FAKE_THEN", "sleep 30")
+	a := newTestAgent("p")
+	a.timeout = time.Minute
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan int)
+	go func() { done <- a.run(ctx, 1, "test") }()
+	runs(t, log, 1)
+	cancel()
+	select {
+	case got := <-done:
+		if got != statusStopped {
+			t.Errorf("status %d, want %d", got, statusStopped)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("run did not stop")
 	}
 }
 

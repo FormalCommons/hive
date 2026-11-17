@@ -1,9 +1,9 @@
 # hive-agent
 
 Runs a coding agent CLI, `claude`, `codex` or `pi`, again and again: on a
-timer, when triggered over HTTP, or both. Each run is one non-interactive
-invocation, `claude -p`, `codex exec` or `pi -p`. Only one run happens at a
-time.
+timer, when triggered over HTTP, or both. Or it runs the CLI once and exits,
+for a fresh container per job. Each run is one non-interactive invocation,
+`claude -p`, `codex exec` or `pi -p`. Only one run happens at a time.
 
 ## Usage
 
@@ -19,8 +19,9 @@ hive-agent -cli claude|codex|pi -session resume|fresh [flags] [-- extra CLI argu
 | `-every` | Run at start, then this long after each run ends (`30m`, `1h`). Needs a prompt. |
 | `-listen` | Serve the trigger API on this address (`:8080`). |
 | `-timeout` | Stop a run that takes longer than this. By default there is no limit. |
+| `-once` | Run once, then exit with the CLI's exit status (see [Once](#once)). Needs a prompt; leave out `-every` and `-listen`. |
 
-At least one of `-every` and `-listen` is needed. Everything after `--` is
+Set `-every`, `-listen` or both, or `-once`. Everything after `--` is
 passed to the CLI, which runs as:
 
 | | `fresh` | `resume` |
@@ -64,10 +65,25 @@ CLI's environment, so that it does not turn up in the agent's output, but the
 CLI runs as the same user and could still find it. The token keeps other
 clients out, not the agent itself. `GET /healthz` returns 200.
 
+## Once
+
+With `-once`, hive-agent runs the CLI one time and exits with its exit
+status, as the shell reports it: a CLI killed by a signal, such as by the
+kernel when out of memory, gives 128 plus the signal number. If `-timeout`
+stops the run, the status is 124, as `timeout` reports it. If hive-agent is
+stopped, with SIGTERM or SIGINT, the status is 143, since the run is
+stopped with SIGTERM. A prompt that cannot be read or is empty, or a CLI
+that cannot be started, gives 1.
+
+```sh
+hive-agent -cli claude -session fresh -once -timeout 90m \
+  -prompt-file /prompt/PROMPT.md -- --dangerously-skip-permissions
+```
+
 ## Container
 
 The image, `ghcr.io/formalcommons/hive-agent`, contains the three CLIs
-plus git, curl and tini. It runs as user `node` (uid 1000) in `/work`.
+plus git, curl, jq and tini. It runs as user `node` (uid 1000) in `/work`.
 Claude Code refuses `--dangerously-skip-permissions` as root, so keep it that
 way. Sessions and CLI settings live under `/home/node`, so mount a volume
 there to keep them across restarts.

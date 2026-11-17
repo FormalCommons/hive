@@ -13,7 +13,7 @@ ARG CLAUDE_CODE_VERSION=2.1.322
 ARG CODEX_VERSION=0.167.0
 ARG PI_VERSION=1.5.2
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl git tini \
+ && apt-get install -y --no-install-recommends ca-certificates curl git jq tini \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} @openai/codex@${CODEX_VERSION} \
     @earendil-works/pi-coding-agent@${PI_VERSION} \
