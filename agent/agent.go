@@ -112,26 +112,37 @@ func (a *agent) loop(ctx context.Context) {
 	}
 }
 
-func (a *agent) run(ctx context.Context, n int, reason string) {
+// Exit statuses of a run that did not end by itself, as timeout(1) and the
+// shell report them.
+const (
+	statusTimedOut = 124
+	statusStopped  = 128 + int(syscall.SIGTERM)
+)
+
+// run runs the CLI once. It returns the CLI's exit status, as the shell
+// reports it; statusTimedOut or statusStopped if the run was cut short; or
+// 1 if it did not start.
+func (a *agent) run(ctx context.Context, n int, reason string) int {
 	prompt, err := a.prompt()
 	if err != nil {
-		log.Printf("run %d: %v; trigger messages kept for the next run", n, err)
-		return
+		log.Printf("run %d skipped: %v", n, err)
+		return 1
 	}
 	messages := a.take()
 	prompt = strings.Join(nonEmpty(append([]string{strings.TrimSpace(prompt)}, messages...)), "\n\n")
 	if prompt == "" {
 		log.Printf("run %d: empty prompt, skipped", n)
-		return
+		return 1
 	}
+	runCtx := ctx
 	if a.timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, a.timeout)
+		runCtx, cancel = context.WithTimeout(ctx, a.timeout)
 		defer cancel()
 	}
 
 	args := a.command()
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd := exec.CommandContext(runCtx, args[0], args[1:]...)
 	cmd.Stdin = strings.NewReader(prompt)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	cmd.Env = a.env
@@ -153,14 +164,29 @@ func (a *agent) run(ctx context.Context, n int, reason string) {
 		// Stop whatever the run left in its process group.
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
-	result := "succeeded"
+	status, result := 0, "succeeded"
+	var exit *exec.ExitError
 	switch {
-	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		result = "timed out"
+	case ctx.Err() != nil:
+		status, result = statusStopped, "stopped"
+	case runCtx.Err() != nil:
+		status, result = statusTimedOut, "timed out"
+	case errors.As(err, &exit):
+		status, result = exitStatus(exit), "failed: "+err.Error()
 	case err != nil:
-		result = "failed: " + err.Error()
+		status, result = 1, "failed: "+err.Error()
 	}
 	log.Printf("run %d %s after %s", n, result, time.Since(start).Round(time.Second))
+	return status
+}
+
+// exitStatus reports a process killed by a signal as the shell does, as
+// 128 plus the signal number, where ExitCode reports -1.
+func exitStatus(e *exec.ExitError) int {
+	if ws, ok := e.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+		return 128 + int(ws.Signal())
+	}
+	return e.ExitCode()
 }
 
 func nonEmpty(s []string) []string {

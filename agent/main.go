@@ -1,5 +1,6 @@
 // Command hive-agent runs a coding agent CLI, claude, codex or pi, again and
-// again: on a timer, when triggered over HTTP, or both. See README.md.
+// again: on a timer, when triggered over HTTP, or both; or just once. See
+// README.md.
 package main
 
 import (
@@ -30,6 +31,7 @@ func main() {
 	every := flag.Duration("every", 0, "run at start, then this long after each run ends")
 	listen := flag.String("listen", "", "address for the trigger API, such as :8080")
 	timeout := flag.Duration("timeout", 0, "stop a run that takes longer than this")
+	once := flag.Bool("once", false, "run once, then exit with the CLI's exit status")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "usage: hive-agent [flags] [-- extra CLI arguments]\n")
 		flag.PrintDefaults()
@@ -59,8 +61,12 @@ func main() {
 		log.Fatal(`-session must be "resume" or "fresh"`)
 	case *prompt != "" && *promptFile != "":
 		log.Fatal("set -prompt or -prompt-file, not both")
-	case *every <= 0 && *listen == "":
-		log.Fatal("nothing would ever run: set -every, -listen or both")
+	case *once && (*every > 0 || *listen != ""):
+		log.Fatal("-once runs once: leave out -every and -listen")
+	case *once && *prompt == "" && *promptFile == "":
+		log.Fatal("-once needs -prompt or -prompt-file")
+	case !*once && *every <= 0 && *listen == "":
+		log.Fatal("nothing would ever run: set -every, -listen or both, or -once")
 	case *every > 0 && *prompt == "" && *promptFile == "":
 		log.Fatal("-every needs -prompt or -prompt-file")
 	}
@@ -73,6 +79,9 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	if *once {
+		os.Exit(a.run(ctx, 1, "once"))
+	}
 	if *listen != "" {
 		// Listen before the first run, so that a bad address stops
 		// hive-agent before it starts anything.

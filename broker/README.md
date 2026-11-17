@@ -100,7 +100,7 @@ of their own. The broker never logs tokens.
 ## Using a token with gh and git
 
 These examples reach the broker as `broker`, and need `curl` and `jq`; the
-[hive-agent](../agent/) image has `curl` and `git`, but not yet `jq` or `gh`.
+[hive-agent](../agent/) image has `curl`, `git` and `jq`, but not `gh`.
 
 `gh` takes a token from `GH_TOKEN`:
 
