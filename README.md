@@ -16,9 +16,9 @@ together with Docker Compose or Podman.
 ## Images
 
 Each push to main publishes every image for linux/amd64 and linux/arm64:
-`ghcr.io/mathlib-initiative/hive-gateway`,
-`ghcr.io/mathlib-initiative/hive-agent` and
-`ghcr.io/mathlib-initiative/hive-broker`. The tag `latest` follows main, and
+`ghcr.io/formalcommons/hive-gateway`,
+`ghcr.io/formalcommons/hive-agent` and
+`ghcr.io/formalcommons/hive-broker`. The tag `latest` follows main, and
 `sha-` plus the first seven characters of a commit hash names the build of
 that commit. A version tag such as `v1.2.3` publishes `1.2.3`.
 

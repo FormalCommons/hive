@@ -134,7 +134,7 @@ podman run --rm -p 8080:8080 \
   -v "$PWD/config.json:/etc/hive-broker/config.json:ro" \
   --secret github-app-key,target=/run/secrets/github-app.pem,uid=65532,mode=0400 \
   -e ALICE_TOKEN -e BOB_TOKEN \
-  ghcr.io/mathlib-initiative/hive-broker
+  ghcr.io/formalcommons/hive-broker
 ```
 
 With Docker, mount the key read-only, such as with

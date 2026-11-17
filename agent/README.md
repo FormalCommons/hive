@@ -66,7 +66,7 @@ clients out, not the agent itself. `GET /healthz` returns 200.
 
 ## Container
 
-The image, `ghcr.io/mathlib-initiative/hive-agent`, contains the three CLIs
+The image, `ghcr.io/formalcommons/hive-agent`, contains the three CLIs
 plus git, curl and tini. It runs as user `node` (uid 1000) in `/work`.
 Claude Code refuses `--dangerously-skip-permissions` as root, so keep it that
 way. Sessions and CLI settings live under `/home/node`, so mount a volume
@@ -77,7 +77,7 @@ mkdir -p work prompt  # and write prompt/PROMPT.md
 docker run -d --name agent \
   -v agent-home:/home/node -v "$PWD/work:/work" -v "$PWD/prompt:/prompt:ro" \
   -e ANTHROPIC_BASE_URL=http://gateway:8080/anthropic -e ANTHROPIC_AUTH_TOKEN \
-  ghcr.io/mathlib-initiative/hive-agent \
+  ghcr.io/formalcommons/hive-agent \
   -cli claude -session resume -every 30m -prompt-file /prompt/PROMPT.md \
   -- --dangerously-skip-permissions
 ```
